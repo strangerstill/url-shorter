@@ -104,7 +104,7 @@ func TestGetOriginURL(t *testing.T) {
 					}
 				}
 			}
-			fmt.Printf("\nrun test: %v origin: %v short: %v\n", test.name, test.originURL, shortKet)
+			fmt.Printf("\nrun test: %v, origin: %v, short: %v\n", test.name, test.originURL, shortKet)
 			request := httptest.NewRequest(http.MethodGet, "/"+shortKet, nil)
 			w := httptest.NewRecorder()
 			getOriginURL(w, request)
@@ -117,7 +117,7 @@ func TestGetOriginURL(t *testing.T) {
 					return
 				}
 			}(res.Body)
-			fmt.Printf("want code = %d StatusCode %d\n", test.want.code, res.StatusCode)
+			fmt.Printf("expected code: %d, status code %d\n", test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.code, res.StatusCode)
 			if res.StatusCode == http.StatusTemporaryRedirect {
 				fmt.Printf("want location = %s location %s\n", test.originURL, res.Header.Get("Location"))

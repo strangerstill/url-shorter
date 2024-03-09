@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/go-chi/chi/v5"
 	"io"
 	"log"
 	"math/rand"
@@ -65,22 +67,16 @@ func getOriginURL(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func chooseHandle(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		setShortURL(w, r)
-	} else if r.Method == http.MethodGet {
-		getOriginURL(w, r)
-	}
-}
-
 func main() {
 	urls = make(map[string]string)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", chooseHandle)
+	r := chi.NewRouter()
 
-	err := http.ListenAndServe(":8080", mux)
-	if err != nil {
-		panic(err)
+	r.Post("/", setShortURL)
+	r.Get("/{url}", getOriginURL)
+
+	if err := http.ListenAndServe(":8080", r); err != nil {
+		fmt.Printf("Ошибка при запуске сервера: %s", err.Error())
+		return
 	}
 }
