@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -22,10 +23,10 @@ func makeShortUrl() string {
 }
 
 func setShortURL(w http.ResponseWriter, r *http.Request) {
-	originalURL := r.FormValue("url")
-	if originalURL != "" {
+	originURL, _ := io.ReadAll(r.Body)
+	if string(originURL) != "" {
 		shortUrl := makeShortUrl()
-		urls[shortUrl] = originalURL
+		urls[shortUrl] = string(originURL)
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusCreated)
 		_, err := w.Write([]byte("http://localhost:8080/" + shortUrl))
