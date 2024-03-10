@@ -31,7 +31,7 @@ func setShortURL(w http.ResponseWriter, r *http.Request) {
 		urls[shortUrl] = string(originURL)
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusCreated)
-		_, err := w.Write([]byte("http://localhost:8080/" + shortUrl))
+		_, err := w.Write([]byte("http://localhost" + flagBaseShortAddr + "/" + shortUrl))
 		if err != nil {
 			log.Println(err)
 			return
@@ -68,6 +68,15 @@ func getOriginURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	parseFlags()
+
+	if err := run(); err != nil {
+		fmt.Printf("Ошибка при запуске сервера: %s", err.Error())
+		panic(err)
+	}
+}
+
+func run() error {
 	urls = make(map[string]string)
 
 	r := chi.NewRouter()
@@ -75,8 +84,8 @@ func main() {
 	r.Post("/", setShortURL)
 	r.Get("/{url}", getOriginURL)
 
-	if err := http.ListenAndServe(":8080", r); err != nil {
-		fmt.Printf("Ошибка при запуске сервера: %s", err.Error())
-		return
-	}
+	fmt.Println("flagRunAddr = ", flagRunAddr)
+
+	fmt.Println("Running server on", flagRunAddr)
+	return http.ListenAndServe(flagRunAddr, r)
 }
