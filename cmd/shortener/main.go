@@ -8,12 +8,31 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"sync"
 	"time"
 )
 
-var urls map[string]string
+type Storage struct {
+	urls map[string]string
+	mu   sync.Mutex
+}
 
-func makeShortUrl() string {
+func (s *Storage) addURL(shortURL, originURL string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.urls[shortURL] = originURL
+}
+
+func (s *Storage) getURL(shortURL string) (string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	url, ok := s.urls[shortURL]
+	return url, ok
+}
+
+var storage = Storage{urls: make(map[string]string)}
+
+func makeshortURL() string {
 	const alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	const urlLength = 8
 	rand.Seed(time.Now().UnixNano())
@@ -27,11 +46,11 @@ func makeShortUrl() string {
 func setShortURL(w http.ResponseWriter, r *http.Request) {
 	originURL, _ := io.ReadAll(r.Body)
 	if string(originURL) != "" {
-		shortUrl := makeShortUrl()
-		urls[shortUrl] = string(originURL)
+		shortURL := makeshortURL()
+		storage.addURL(shortURL, string(originURL))
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusCreated)
-		_, err := w.Write([]byte("http://localhost" + flagBaseURL + "/" + shortUrl))
+		_, err := w.Write([]byte("http://localhost" + flagBaseURL + "/" + shortURL))
 		if err != nil {
 			log.Println(err)
 			return
@@ -48,7 +67,7 @@ func setShortURL(w http.ResponseWriter, r *http.Request) {
 
 func getOriginURL(w http.ResponseWriter, r *http.Request) {
 	shortURL := r.URL.String()[1:]
-	url, ok := urls[shortURL]
+	url, ok := storage.getURL(shortURL)
 	if !ok {
 		http.Error(w, "origin url not found", http.StatusBadRequest)
 		return
@@ -77,8 +96,6 @@ func main() {
 }
 
 func run() error {
-	urls = make(map[string]string)
-
 	r := chi.NewRouter()
 
 	r.Post("/", setShortURL)

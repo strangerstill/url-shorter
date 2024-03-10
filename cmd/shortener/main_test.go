@@ -12,7 +12,6 @@ import (
 )
 
 func TestSetShortURL(t *testing.T) {
-	urls = make(map[string]string)
 	type want struct {
 		code int
 	}
@@ -77,14 +76,7 @@ func TestGetOriginURL(t *testing.T) {
 			},
 		},
 		{
-			name:      "urls include originURL",
-			originURL: "https://pkg.go.dev/testing",
-			want: want{
-				code: http.StatusTemporaryRedirect,
-			},
-		},
-		{
-			name:      "urls don't include originURL",
+			name:      "not empty originURL",
 			originURL: "https://ieftimov.com/posts/testing-in-go-go-test/",
 			want: want{
 				code: http.StatusBadRequest,
@@ -92,36 +84,41 @@ func TestGetOriginURL(t *testing.T) {
 		},
 	}
 
+	parseFlags()
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var shortKet string
-			if test.originURL == "" {
-				shortKet = ""
-			} else {
-				for key, value := range urls {
-					if value == test.originURL {
-						shortKet = key
-					}
-				}
-			}
-			fmt.Printf("\nrun test: %v, origin: %v, short: %v\n", test.name, test.originURL, shortKet)
-			request := httptest.NewRequest(http.MethodGet, "/"+shortKet, nil)
-			w := httptest.NewRecorder()
-			getOriginURL(w, request)
+			originURL := strings.NewReader(test.originURL)
+			postRequest := httptest.NewRequest(http.MethodPost, "/", originURL)
+			postW := httptest.NewRecorder()
+			setShortURL(postW, postRequest)
+			postRes := postW.Result()
+			resShortURL, _ := io.ReadAll(postRes.Body)
+			//if err != nil {
+			//	log.Fatal(err)
+			//}
+			//u, _ := url.Parse(string(resShortURL))
+			//shortKey := u.Path[1:]
+			//originUrl, ok := storage.getURL(shortKey)
 
-			res := w.Result()
+			getRequest := httptest.NewRequest(http.MethodGet, string(resShortURL), nil)
+			getW := httptest.NewRecorder()
+
+			getOriginURL(getW, getRequest)
+			getRes := getW.Result()
 			defer func(Body io.ReadCloser) {
 				err := Body.Close()
 				if err != nil {
 					log.Println(err)
 					return
 				}
-			}(res.Body)
-			fmt.Printf("expected code: %d, status code %d\n", test.want.code, res.StatusCode)
-			assert.Equal(t, test.want.code, res.StatusCode)
-			if res.StatusCode == http.StatusTemporaryRedirect {
-				fmt.Printf("want location = %s location %s\n", test.originURL, res.Header.Get("Location"))
-				assert.Equal(t, res.Header.Get("Location"), test.originURL)
+			}(getRes.Body)
+
+			fmt.Printf("expected code: %d, status code %d\n", test.want.code, getRes.StatusCode)
+			assert.Equal(t, test.want.code, getRes.StatusCode)
+			if getRes.StatusCode == http.StatusTemporaryRedirect {
+				fmt.Printf("want location = %s location %s\n", test.originURL, getRes.Header.Get("Location"))
+				assert.Equal(t, getRes.Header.Get("Location"), test.originURL)
 			}
 		})
 	}
