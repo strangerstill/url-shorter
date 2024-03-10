@@ -31,7 +31,7 @@ func setShortURL(w http.ResponseWriter, r *http.Request) {
 		urls[shortUrl] = string(originURL)
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusCreated)
-		_, err := w.Write([]byte("http://localhost" + flagBaseShortAddr + "/" + shortUrl))
+		_, err := w.Write([]byte("http://localhost" + flagBaseURL + "/" + shortUrl))
 		if err != nil {
 			log.Println(err)
 			return
