@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go.uber.org/zap"
 	"net/http"
 
 	"github.com/strangerstill/url-shorter/internal/app"
@@ -20,8 +21,15 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	logger := zap.Must(zap.NewDevelopment())
+	defer func(logger *zap.Logger) {
+		err := logger.Sync()
+		if err != nil {
+			return
+		}
+	}(logger)
 	return http.ListenAndServe(
 		conf.RunAddr,
-		app.MakeRouter(app.NewHandlers(conf.BaseURL)),
+		app.MakeRouter(app.NewHandlers(conf.BaseURL), logger),
 	)
 }

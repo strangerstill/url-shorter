@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"go.uber.org/zap"
 	"io"
 	"log"
 	"net/http"
@@ -19,8 +20,9 @@ func NewHandlers(baseURL url.URL) *Handlers {
 	return &Handlers{NewApp(), baseURL}
 }
 
-func MakeRouter(h *Handlers) *chi.Mux {
+func MakeRouter(h *Handlers, logger *zap.Logger) *chi.Mux {
 	r := chi.NewRouter()
+	r.Use(LoggingMiddleware(logger))
 	r.Post("/", h.SaveURL)
 	r.Get("/{url}", h.GetURL)
 	return r
