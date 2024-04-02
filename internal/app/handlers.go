@@ -1,7 +1,10 @@
 package app
 
 import (
+	"encoding/json"
 	"errors"
+	"github.com/strangerstill/url-shorter/internal/loggger"
+	"github.com/strangerstill/url-shorter/internal/models"
 	"go.uber.org/zap"
 	"io"
 	"log"
@@ -20,12 +23,45 @@ func NewHandlers(baseURL url.URL) *Handlers {
 	return &Handlers{NewApp(), baseURL}
 }
 
-func MakeRouter(h *Handlers, logger *zap.Logger) *chi.Mux {
+func MakeRouter(h *Handlers, loggerItem *zap.Logger) *chi.Mux {
 	r := chi.NewRouter()
-	r.Use(LoggingMiddleware(logger))
+	r.Use(loggger.LoggingMiddleware(loggerItem))
 	r.Post("/", h.SaveURL)
 	r.Get("/{url}", h.GetURL)
+	r.Post("/api/shorten", h.SaveURLJSON)
 	return r
+}
+
+func (h *Handlers) SaveURLJSON(w http.ResponseWriter, r *http.Request) {
+	var payload models.PayloadUrl
+	data := json.NewDecoder(r.Body)
+	if err := data.Decode(&payload); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	url := payload.Url
+	if url == "" {
+		http.Error(w, "empty request", http.StatusBadRequest)
+		return
+	}
+	id, err := h.app.SaveURL(url)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	newUrl := h.baseURL
+	newUrl.Path = id
+
+	resp := models.ResultUrl{
+		Result: newUrl.String(),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(resp); err != nil {
+		return
+	}
 }
 
 func (h *Handlers) SaveURL(w http.ResponseWriter, r *http.Request) {
