@@ -36,7 +36,7 @@ func (h *Handlers) SaveURLJSON(w http.ResponseWriter, r *http.Request) {
 	var payload models.PayloadUrl
 	data := json.NewDecoder(r.Body)
 	if err := data.Decode(&payload); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	url := payload.Url
