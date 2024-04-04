@@ -15,12 +15,11 @@ import (
 )
 
 type Handlers struct {
-	app     *App
-	baseURL url.URL
+	app *App
 }
 
 func NewHandlers(baseURL url.URL) *Handlers {
-	return &Handlers{NewApp(), baseURL}
+	return &Handlers{NewApp(baseURL)}
 }
 
 func MakeRouter(h *Handlers, loggerItem *zap.Logger) *chi.Mux {
@@ -44,22 +43,17 @@ func (h *Handlers) SaveURLJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "empty request", http.StatusBadRequest)
 		return
 	}
-	id, err := h.app.SaveURL(url)
+	newUrl, err := h.app.SaveURL(url)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	newUrl := h.baseURL
-	newUrl.Path = id
 
-	resp := models.ResultUrl{
-		Result: newUrl.String(),
-	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
 	enc := json.NewEncoder(w)
-	if err := enc.Encode(resp); err != nil {
+	if err := enc.Encode(newUrl); err != nil {
 		return
 	}
 }
@@ -76,18 +70,15 @@ func (h *Handlers) SaveURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := h.app.SaveURL(url)
+	newUrl, err := h.app.SaveURL(url)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	newUrl := h.baseURL
-	newUrl.Path = id
-
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
-	_, err = w.Write([]byte(newUrl.String()))
+	_, err = io.WriteString(w, newUrl.Result)
 	if err != nil {
 		log.Println(err)
 		return

@@ -2,16 +2,19 @@ package app
 
 import (
 	"errors"
+	"github.com/strangerstill/url-shorter/internal/models"
 	"math/rand"
+	"net/url"
 	"time"
 )
 
 type App struct {
-	store *Storage
+	store   *Storage
+	baseURL url.URL
 }
 
-func NewApp() *App {
-	return &App{NewStorage()}
+func NewApp(baseURL url.URL) *App {
+	return &App{NewStorage(), baseURL}
 }
 
 var ErrNotFound = errors.New("url was not found")
@@ -27,13 +30,15 @@ func (*App) makeRandID() string {
 	return string(shortKey)
 }
 
-func (a *App) SaveURL(url string) (id string, err error) {
-	id = a.makeRandID()
+func (a *App) SaveURL(url string) (result models.ResultUrl, err error) {
+	id := a.makeRandID()
 	ok := a.store.Set(id, url)
 	if ok {
-		return id, nil
+		newUrl := a.baseURL
+		newUrl.Path = id
+		return models.ResultUrl{Result: newUrl.String()}, nil
 	}
-	return id, errors.New("failed to save url")
+	return models.ResultUrl{Result: ""}, errors.New("failed to save url")
 }
 
 func (a *App) GetURL(id string) (string, error) {
