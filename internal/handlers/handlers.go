@@ -1,8 +1,9 @@
-package app
+package handlers
 
 import (
 	"encoding/json"
 	"errors"
+	"github.com/strangerstill/url-shorter/internal/app"
 	"github.com/strangerstill/url-shorter/internal/loggger"
 	"github.com/strangerstill/url-shorter/internal/models"
 	"go.uber.org/zap"
@@ -15,16 +16,17 @@ import (
 )
 
 type Handlers struct {
-	app *App
+	myApp *app.App
 }
 
 func NewHandlers(baseURL url.URL) *Handlers {
-	return &Handlers{NewApp(baseURL)}
+	return &Handlers{app.NewApp(baseURL)}
 }
 
 func MakeRouter(h *Handlers, loggerItem *zap.Logger) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(loggger.LoggingMiddleware(loggerItem))
+	r.Use(ZipMiddleware)
 	r.Post("/", h.SaveURL)
 	r.Get("/{url}", h.GetURL)
 	r.Post("/api/shorten", h.SaveURLJSON)
@@ -43,7 +45,7 @@ func (h *Handlers) SaveURLJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "empty request", http.StatusBadRequest)
 		return
 	}
-	newUrl, err := h.app.SaveURL(url)
+	newUrl, err := h.myApp.SaveURL(url)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -70,7 +72,7 @@ func (h *Handlers) SaveURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newUrl, err := h.app.SaveURL(url)
+	newUrl, err := h.myApp.SaveURL(url)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -87,9 +89,9 @@ func (h *Handlers) SaveURL(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) GetURL(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Path[1:]
-	url, err := h.app.GetURL(id)
+	url, err := h.myApp.GetURL(id)
 	if err != nil {
-		if errors.Is(err, ErrNotFound) {
+		if errors.Is(err, app.ErrNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
