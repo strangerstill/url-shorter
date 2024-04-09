@@ -8,8 +8,13 @@ import (
 	"time"
 )
 
+type Storager interface {
+	Set(id, url string) bool
+	Get(id string) (string, bool)
+}
+
 type App struct {
-	store   *Storage
+	store   Storager
 	baseURL url.URL
 }
 
